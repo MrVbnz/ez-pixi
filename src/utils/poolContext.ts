@@ -1,6 +1,7 @@
 ﻿import {Pool} from "./pool.ts";
+import {Disposable} from "./disposable.ts";
 
-export class PoolContext<T> {
+export class PoolContext<T> implements Disposable {
     private pool: Pool<T>;
     private acquiredObjects: T[] = [];
 
@@ -14,7 +15,7 @@ export class PoolContext<T> {
         return obj;
     }
 
-    release(): void {
+    dispose(): void {
         for (const obj of this.acquiredObjects) {
             this.pool.release(obj);
         }

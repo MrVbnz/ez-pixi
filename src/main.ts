@@ -1,14 +1,14 @@
-import {Application, Sprite, Texture} from 'pixi.js';
+import {Application, Assets, PointData, Sprite, Texture} from 'pixi.js';
 import {SystemTags} from "./ecs/systemTags.ts";
 import {GameEventMap} from "./ecs/gameEventMap.ts";
-import {ECS, EntityId} from "@typeonce/ecs";
+import {ECS, EntityId, InitFunctions} from "@typeonce/ecs";
 import {SpriteWrapperComponent} from "./ecs/components/spriteComponent.ts";
 import {ColliderComponent} from "./ecs/components/colliderComponent.ts";
 import {PlayerComponent} from "./ecs/components/playerComponent.ts";
 import {CollisionDetectionSystem} from "./ecs/systems/collisionDetectionSystem.ts";
-import {PlayerControlsSystem} from "./ecs/systems/playerControlsSystem.ts";
+import {MouseData, PlayerControlsSystem} from "./ecs/systems/playerControlsSystem.ts";
 import {RigidbodyCollisionSystem} from "./ecs/systems/rigidbodyCollisionSystem.ts";
-import {RigidbodyComponent} from "./ecs/components/rigidbodyComponent.ts";
+import {CircularRigidbodyComponent} from "./ecs/components/rigidbodyComponent.ts";
 import {vec2} from "gl-matrix";
 
 (async () => {
@@ -16,67 +16,137 @@ import {vec2} from "gl-matrix";
     await app.init({background: '#1099bb', resizeTo: window});
     document.body.appendChild(app.canvas);
 
-    const mouseCoords = {x: 0, y: 0};
+    const circleTexture = await Assets.load('/assets/textures/circle.png');
 
+
+    const mouseData: MouseData = {pressed: false, x: 0, y: 0};
     app.stage.eventMode = 'static';
     app.stage.hitArea = app.screen;
-    app.stage.on('mousemove', (event) => {
-        mouseCoords.x = event.global.x;
-        mouseCoords.y = event.global.y;
-    });
+    app.stage
+        .on('mousemove', (event) => {
+            mouseData.x = event.global.x;
+            mouseData.y = event.global.y;
+        })
+        .on('pointerdown', _ => mouseData.pressed = true)
+        .on('pointerup', _ => mouseData.pressed = false);
 
-    function createBaseSprite(tint: number): Sprite {
-        const sp = new Sprite(Texture.WHITE);
-        sp.position.set(Math.random() * app.screen.width, Math.random() * app.screen.height - 200);
-        sp.width = 100;
-        sp.height = 100;
+    function createBaseSprite(tint: number, r: number): Sprite {
+        const sp = new Sprite(circleTexture);
+        const offset = 100;
+        sp.position.set(
+            offset + Math.random() * (app.screen.width - offset),
+            offset + Math.random() * (app.screen.height - offset)
+        );
+        sp.width = r * 2;
+        sp.height = r * 2;
+        sp.anchor = {x: 0.5, y: 0.5};
         sp.tint = tint;
         app.stage.addChild(sp);
         return sp;
     }
 
-    function createFloor(x: number, size: number):  Sprite {
+    function createWall(pos: PointData, size: PointData): Sprite {
         const sp = new Sprite(Texture.WHITE);
-        sp.position.set(x, app.screen.height- 100);
-        sp.width = size;
-        sp.height = 100;
+        sp.position = pos;
+        sp.width = size.x;
+        sp.height = size.y;
         sp.tint = 0x111111;
+        sp.anchor = {x: 0.5, y: 0.5};
         app.stage.addChild(sp);
         return sp;
     }
 
+    function createWalls(state: InitFunctions<SystemTags, GameEventMap>) {
+        const thickness = 100;
+        let wall = createWall(
+            {x: app.screen.width / 2, y: 0},
+            {x: app.screen.width, y: thickness}
+        );
+        state.addComponent(
+            state.createEntity(),
+            new SpriteWrapperComponent({sprite: wall}),
+            new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
+        );
+
+        wall = createWall(
+            {x: app.screen.width / 2, y: app.screen.height},
+            {x: app.screen.width, y: thickness}
+        );
+        state.addComponent(
+            state.createEntity(),
+            new SpriteWrapperComponent({sprite: wall}),
+            new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
+        )
+
+        wall = createWall(
+            {x: 0, y: app.screen.height / 2},
+            {x: thickness, y: app.screen.height}
+        );
+        state.addComponent(
+            state.createEntity(),
+            new SpriteWrapperComponent({sprite: wall}),
+            new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
+        )
+
+        wall = createWall(
+            {x: app.screen.width, y: app.screen.height / 2},
+            {x: thickness, y: app.screen.height}
+        );
+        state.addComponent(
+            state.createEntity(),
+            new SpriteWrapperComponent({sprite: wall}),
+            new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
+        )
+    }
+
     const world = ECS.create<SystemTags, GameEventMap>(
-        (worldState) => {
+        (state) => {
+            createWalls(state);
 
-            const count = 5;
-            const size = (app.screen.width / count);
-            for (let i = 0; i < count; i++)
-                worldState.addComponent(
-                    worldState.createEntity(),
-                    new SpriteWrapperComponent({sprite: createFloor(i * size, size - 3)}),
+            const blockV = createWall(
+                {x: app.screen.width / 2, y: app.screen.height / 2},
+                {x: 50, y: 400}
+            );
+            state.addComponent(
+                state.createEntity(),
+                new SpriteWrapperComponent({sprite: blockV}),
+                new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
+            )
+            const blockH = createWall(
+                {x: app.screen.width / 2, y: app.screen.height / 2},
+                {x: 400, y: 50}
+            );
+            state.addComponent(
+                state.createEntity(),
+                new SpriteWrapperComponent({sprite: blockH}),
+                new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
+            )
+
+            for (let i = 0; i < 30; i++) {
+                const random = 0.5 + Math.random();
+                const mass = random * 2;
+                const r = random * 50;
+                state.addComponent(
+                    state.createEntity(),
+                    new CircularRigidbodyComponent({mass: mass, radius: 50 * random, velocity: vec2.create()}),
+                    new SpriteWrapperComponent({sprite: createBaseSprite(0x676767, r)}),
                     new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
                 )
+            }
 
-            for (let i = 0; i < 20; i++)
-                worldState.addComponent(
-                    worldState.createEntity(),
-                    new RigidbodyComponent({mass: 1, velocity: vec2.create()}),
-                    new SpriteWrapperComponent({sprite: createBaseSprite(0x676767)}),
-                    new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
-                )
 
-            worldState.addComponent(
-                worldState.createEntity(),
+            state.addComponent(
+                state.createEntity(),
                 new PlayerComponent(),
-                new RigidbodyComponent({mass: 1, velocity: vec2.create()}),
-                new SpriteWrapperComponent({sprite: createBaseSprite(0x995555)}),
+                new CircularRigidbodyComponent({mass: 1, radius: 50, velocity: vec2.create()}),
+                new SpriteWrapperComponent({sprite: createBaseSprite(0x995555, 50)}),
                 new ColliderComponent({layer: "Player", collidingEntities: new Set<EntityId>()})
             );
 
-            worldState.addSystem(
+            state.addSystem(
                 new CollisionDetectionSystem(),
                 new RigidbodyCollisionSystem(),
-                new PlayerControlsSystem({mousePosition: mouseCoords})
+                new PlayerControlsSystem({mouseData: mouseData})
             );
         }
     );

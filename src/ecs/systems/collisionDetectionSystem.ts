@@ -1,4 +1,4 @@
-﻿import {ComponentClassMap, ComponentInstanceMap, EntityId, query, System} from "@typeonce/ecs";
+﻿import {ComponentClassMap, ComponentInstanceMap, query, System} from "@typeonce/ecs";
 import {SystemTags} from "../systemTags.ts";
 import {GameEventMap} from "../gameEventMap.ts";
 import {SpriteWrapperComponent} from "../components/spriteComponent.ts";
@@ -11,17 +11,17 @@ export type CollisionLayer =
 
 const collisionMatrix = new Map<CollisionLayer, CollisionLayer[]>([
     ["Player", ["Level"]],
-    ["Level", ["Level"]]
+    ["Level", ["Level", "Player"]],
 ]);
 
-const queryMap: ComponentClassMap = {
+const colliderQueryMap: ComponentClassMap = {
     spriteWrapper: SpriteWrapperComponent,
     collider: ColliderComponent
 };
 
-const colliders = query(queryMap);
+const colliders = query(colliderQueryMap);
 
-type CollidersQueryResponse = ComponentInstanceMap<typeof queryMap>;
+type CollidersQueryResponse = ComponentInstanceMap<typeof colliderQueryMap>;
     
 
 const SystemFactory = System<SystemTags, GameEventMap>();
