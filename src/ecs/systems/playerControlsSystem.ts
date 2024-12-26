@@ -1,16 +1,16 @@
 ﻿import {query, System} from "@typeonce/ecs";
 import {SystemTags} from "../systemTags.ts";
 import {GameEventMap} from "../gameEventMap.ts";
-import {SpriteWrapperComponent} from "../components/spriteComponent.ts";
 import {PlayerComponent} from "../components/playerComponent.ts";
 import {CircularRigidbodyComponent} from "../components/rigidbodyComponent.ts";
+import {BoundsComponent} from "../components/boundsComponent.ts";
 
 export type MouseData = {
     pressed: boolean; x: number; y: number;
 }
 
 const players = query({
-    spriteWrapper: SpriteWrapperComponent,
+    bounds: BoundsComponent,
     player: PlayerComponent,
     rigidbody: CircularRigidbodyComponent,
 });
@@ -26,8 +26,8 @@ export class PlayerControlsSystem extends SystemFactory<{
             if (!input.mouseData.pressed)
                 return;
             
-            const dx = obj.spriteWrapper.sprite.x - input.mouseData.x;
-            const dy = obj.spriteWrapper.sprite.y - input.mouseData.y;
+            const dx = obj.bounds.position[0] - input.mouseData.x;
+            const dy = obj.bounds.position[1] - input.mouseData.y;
             obj.rigidbody.velocity[0] = -dx * 0.05;
             obj.rigidbody.velocity[1] = -dy * 0.05;
         });

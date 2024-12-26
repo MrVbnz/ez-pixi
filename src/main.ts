@@ -1,8 +1,8 @@
-import {Application, Assets, PointData, Sprite, Texture} from 'pixi.js';
+import {Application, Assets, PointData, Sprite, Texture, TilingSprite} from 'pixi.js';
 import {SystemTags} from "./ecs/systemTags.ts";
 import {GameEventMap} from "./ecs/gameEventMap.ts";
 import {ECS, EntityId, InitFunctions} from "@typeonce/ecs";
-import {SpriteWrapperComponent} from "./ecs/components/spriteComponent.ts";
+import {SpriteWrapperComponent} from "./ecs/components/spriteWrapperComponent.ts";
 import {ColliderComponent} from "./ecs/components/colliderComponent.ts";
 import {PlayerComponent} from "./ecs/components/playerComponent.ts";
 import {CollisionDetectionSystem} from "./ecs/systems/collisionDetectionSystem.ts";
@@ -10,6 +10,8 @@ import {MouseData, PlayerControlsSystem} from "./ecs/systems/playerControlsSyste
 import {RigidbodyCollisionSystem} from "./ecs/systems/rigidbodyCollisionSystem.ts";
 import {CircularRigidbodyComponent} from "./ecs/components/rigidbodyComponent.ts";
 import {vec2} from "gl-matrix";
+import {SpriteRenderingSystem} from "./ecs/systems/spriteRenderingSystem.ts";
+import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
 
 (async () => {
     const app = new Application();
@@ -17,7 +19,7 @@ import {vec2} from "gl-matrix";
     document.body.appendChild(app.canvas);
 
     const circleTexture = await Assets.load('/assets/textures/circle.png');
-
+    await Assets.load('/assets/sprites/blocks.json');
 
     const mouseData: MouseData = {pressed: false, x: 0, y: 0};
     app.stage.eventMode = 'static';
@@ -45,19 +47,19 @@ import {vec2} from "gl-matrix";
         return sp;
     }
 
-    function createWall(pos: PointData, size: PointData): Sprite {
-        const sp = new Sprite(Texture.WHITE);
+    function createWall(pos: PointData, size: PointData): TilingSprite {
+        const sp = new TilingSprite(Texture.from("Stone_Bricks.png"));
         sp.position = pos;
         sp.width = size.x;
         sp.height = size.y;
-        sp.tint = 0x111111;
+        sp.tint = 0xFFFFFF;
         sp.anchor = {x: 0.5, y: 0.5};
         app.stage.addChild(sp);
         return sp;
     }
 
     function createWalls(state: InitFunctions<SystemTags, GameEventMap>) {
-        const thickness = 100;
+        const thickness = 48 * 2;
         let wall = createWall(
             {x: app.screen.width / 2, y: 0},
             {x: app.screen.width, y: thickness}
@@ -65,6 +67,10 @@ import {vec2} from "gl-matrix";
         state.addComponent(
             state.createEntity(),
             new SpriteWrapperComponent({sprite: wall}),
+            new BoundsComponent({
+                position: vec2.fromValues(wall.position.x, wall.position.y),
+                size: vec2.fromValues(wall.getSize().width, wall.getSize().height)
+            }),
             new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
         );
 
@@ -75,6 +81,10 @@ import {vec2} from "gl-matrix";
         state.addComponent(
             state.createEntity(),
             new SpriteWrapperComponent({sprite: wall}),
+            new BoundsComponent({
+                position: vec2.fromValues(wall.position.x, wall.position.y),
+                size: vec2.fromValues(wall.getSize().width, wall.getSize().height)
+            }),
             new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
         )
 
@@ -85,6 +95,10 @@ import {vec2} from "gl-matrix";
         state.addComponent(
             state.createEntity(),
             new SpriteWrapperComponent({sprite: wall}),
+            new BoundsComponent({
+                position: vec2.fromValues(wall.position.x, wall.position.y),
+                size: vec2.fromValues(wall.getSize().width, wall.getSize().height)
+            }),
             new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
         )
 
@@ -95,6 +109,10 @@ import {vec2} from "gl-matrix";
         state.addComponent(
             state.createEntity(),
             new SpriteWrapperComponent({sprite: wall}),
+            new BoundsComponent({
+                position: vec2.fromValues(wall.position.x, wall.position.y),
+                size: vec2.fromValues(wall.getSize().width, wall.getSize().height)
+            }),
             new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
         )
     }
@@ -105,31 +123,44 @@ import {vec2} from "gl-matrix";
 
             const blockV = createWall(
                 {x: app.screen.width / 2, y: app.screen.height / 2},
-                {x: 50, y: 400}
+                {x: 48, y: 48 * 8}
             );
             state.addComponent(
                 state.createEntity(),
                 new SpriteWrapperComponent({sprite: blockV}),
+                new BoundsComponent({
+                    position: vec2.fromValues(blockV.position.x, blockV.position.y),
+                    size: vec2.fromValues(blockV.getSize().width, blockV.getSize().height)
+                }),
                 new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
             )
             const blockH = createWall(
                 {x: app.screen.width / 2, y: app.screen.height / 2},
-                {x: 400, y: 50}
+                {x: 48 * 8, y: 48}
             );
             state.addComponent(
                 state.createEntity(),
                 new SpriteWrapperComponent({sprite: blockH}),
+                new BoundsComponent({
+                    position: vec2.fromValues(blockH.position.x, blockH.position.y),
+                    size: vec2.fromValues(blockH.getSize().width, blockH.getSize().height)
+                }),
                 new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
             )
 
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 20; i++) {
                 const random = 0.5 + Math.random();
                 const mass = random * 2;
                 const r = random * 50;
+                const sprite = createBaseSprite(0x676767, r);
                 state.addComponent(
                     state.createEntity(),
                     new CircularRigidbodyComponent({mass: mass, radius: 50 * random, velocity: vec2.create()}),
-                    new SpriteWrapperComponent({sprite: createBaseSprite(0x676767, r)}),
+                    new SpriteWrapperComponent({sprite: sprite}),
+                    new BoundsComponent({
+                        position: vec2.fromValues(sprite.position.x, sprite.position.y),
+                        size: vec2.fromValues(r * 2, r * 2)
+                    }),
                     new ColliderComponent({layer: "Level", collidingEntities: new Set<EntityId>()})
                 )
             }
@@ -138,6 +169,7 @@ import {vec2} from "gl-matrix";
             state.addComponent(
                 state.createEntity(),
                 new PlayerComponent(),
+                new BoundsComponent({position: vec2.fromValues(50, 50), size: vec2.fromValues(100, 100)}),
                 new CircularRigidbodyComponent({mass: 1, radius: 50, velocity: vec2.create()}),
                 new SpriteWrapperComponent({sprite: createBaseSprite(0x995555, 50)}),
                 new ColliderComponent({layer: "Player", collidingEntities: new Set<EntityId>()})
@@ -146,12 +178,16 @@ import {vec2} from "gl-matrix";
             state.addSystem(
                 new CollisionDetectionSystem(),
                 new RigidbodyCollisionSystem(),
+                new SpriteRenderingSystem(),
                 new PlayerControlsSystem({mouseData: mouseData})
             );
         }
     );
 
     app.ticker.add(({deltaTime}) => {
-        world.update(deltaTime);
+        const steps = 2;
+        for (let i = 0; i < steps; i++) {
+            world.update(deltaTime / steps);
+        }
     });
 })();

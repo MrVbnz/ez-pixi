@@ -1,7 +1,7 @@
 ﻿import {ComponentClassMap, ComponentInstanceMap, query, System} from "@typeonce/ecs";
 import {SystemTags} from "../systemTags.ts";
 import {GameEventMap} from "../gameEventMap.ts";
-import {SpriteWrapperComponent} from "../components/spriteComponent.ts";
+import {SpriteWrapperComponent} from "../components/spriteWrapperComponent.ts";
 import {ColliderComponent} from "../components/colliderComponent.ts";
 import {groupBy} from "../../utils/groupBy.ts";
 
