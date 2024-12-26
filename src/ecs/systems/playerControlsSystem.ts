@@ -4,9 +4,13 @@ import {GameEventMap} from "../gameEventMap.ts";
 import {PlayerComponent} from "../components/playerComponent.ts";
 import {CircularRigidbodyComponent} from "../components/rigidbodyComponent.ts";
 import {BoundsComponent} from "../components/boundsComponent.ts";
+import {FederatedPointerEvent} from "pixi.js";
 
 export type MouseData = {
-    pressed: boolean; x: number; y: number;
+    lastEvent: FederatedPointerEvent | null
+    pressed: boolean;
+    x: number;
+    y: number;
 }
 
 const players = query({

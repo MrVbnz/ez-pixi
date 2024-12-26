@@ -1,4 +1,4 @@
-import {Application, Assets, PointData, Sprite, Texture, TilingSprite} from 'pixi.js';
+import {Application, Assets, Graphics, PointData, Sprite, Texture, TilingSprite} from 'pixi.js';
 import {SystemTags} from "./ecs/systemTags.ts";
 import {GameEventMap} from "./ecs/gameEventMap.ts";
 import {ECS, EntityId, InitFunctions} from "@typeonce/ecs";
@@ -12,6 +12,7 @@ import {CircularRigidbodyComponent} from "./ecs/components/rigidbodyComponent.ts
 import {vec2} from "gl-matrix";
 import {SpriteRenderingSystem} from "./ecs/systems/spriteRenderingSystem.ts";
 import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
+import {LevelEditorSystem} from "./ecs/systems/levelEditorSystem.ts";
 
 (async () => {
     const app = new Application();
@@ -21,16 +22,28 @@ import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
     const circleTexture = await Assets.load('/assets/textures/circle.png');
     await Assets.load('/assets/sprites/blocks.json');
 
-    const mouseData: MouseData = {pressed: false, x: 0, y: 0};
+    const mouseData: MouseData = {
+        lastEvent: null,
+        pressed: false,
+        x: 0,
+        y: 0
+    };
     app.stage.eventMode = 'static';
     app.stage.hitArea = app.screen;
     app.stage
-        .on('mousemove', (event) => {
-            mouseData.x = event.global.x;
-            mouseData.y = event.global.y;
+        .on('mousemove', e => {
+            mouseData.x = e.global.x;
+            mouseData.y = e.global.y;
+            mouseData.lastEvent = e;
         })
-        .on('pointerdown', _ => mouseData.pressed = true)
-        .on('pointerup', _ => mouseData.pressed = false);
+        .on('pointerdown', e => {
+            mouseData.lastEvent = e;
+            mouseData.pressed = true;
+        })
+        .on('pointerup', e => {
+            mouseData.lastEvent = e;
+            mouseData.pressed = false;
+        });
 
     function createBaseSprite(tint: number, r: number): Sprite {
         const sp = new Sprite(circleTexture);
@@ -55,6 +68,7 @@ import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
         sp.tint = 0xFFFFFF;
         sp.anchor = {x: 0.5, y: 0.5};
         app.stage.addChild(sp);
+
         return sp;
     }
 
@@ -117,6 +131,8 @@ import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
         )
     }
 
+    const graphics = new Graphics();
+    
     const world = ECS.create<SystemTags, GameEventMap>(
         (state) => {
             createWalls(state);
@@ -175,7 +191,11 @@ import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
                 new ColliderComponent({layer: "Player", collidingEntities: new Set<EntityId>()})
             );
 
+            
+            app.stage.addChild(graphics);
+            
             state.addSystem(
+                new LevelEditorSystem({mouseData: mouseData, appStage: app.stage, debug: graphics}),
                 new CollisionDetectionSystem(),
                 new RigidbodyCollisionSystem(),
                 new SpriteRenderingSystem(),
@@ -185,9 +205,7 @@ import {BoundsComponent} from "./ecs/components/boundsComponent.ts";
     );
 
     app.ticker.add(({deltaTime}) => {
-        const steps = 2;
-        for (let i = 0; i < steps; i++) {
-            world.update(deltaTime / steps);
-        }
+        graphics.clear();
+        world.update(deltaTime);
     });
 })();

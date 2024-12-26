@@ -2,5 +2,6 @@
     | "CollisionDetectionSystem"
     | "RigidbodyCollisionSystem"
     | "SpriteRenderingSystem"
+    | "LevelEditorSystem"
     | "PlayerControlsSystem";
     

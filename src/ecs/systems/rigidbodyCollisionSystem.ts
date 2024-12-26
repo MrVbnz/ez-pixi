@@ -1,4 +1,4 @@
-﻿import {ComponentInstanceMap, query, System} from "@typeonce/ecs";
+﻿import {query, System} from "@typeonce/ecs";
 import {SystemTags} from "../systemTags.ts";
 import {GameEventMap} from "../gameEventMap.ts";
 import {CircularRigidbodyComponent} from "../components/rigidbodyComponent.ts";
@@ -8,6 +8,7 @@ import {v2h} from "../../utils/vec2helper.ts";
 import {clamp} from "../../utils/math.ts";
 import {PoolContext} from "../../utils/poolContext.ts";
 import {BoundsComponent} from "../components/boundsComponent.ts";
+import {QueryResponse} from "../../utils/queryResponse.ts";
 
 const gravity = vec2.fromValues(0, 0.1);
 const drag = 0.0001;
@@ -18,13 +19,13 @@ const rigidbodyQueryMap = {
     collider: ColliderComponent,
     rigidbody: CircularRigidbodyComponent,
 };
-type RigidbodyQueryResponse = ComponentInstanceMap<typeof rigidbodyQueryMap>;
+type RigidbodyQueryResponse = QueryResponse<typeof rigidbodyQueryMap>;
 
 const staticBodyQueryMap = {
     bounds: BoundsComponent,
     collider: ColliderComponent,
 };
-type StaticBodyQueryResponse = ComponentInstanceMap<typeof staticBodyQueryMap>;
+type StaticBodyQueryResponse = QueryResponse<typeof staticBodyQueryMap>;
 
 const rigidbodies = query(rigidbodyQueryMap);
 

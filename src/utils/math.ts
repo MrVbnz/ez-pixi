@@ -5,3 +5,7 @@
         return max;
     return a;
 }
+
+export function roundWithStep(a: number, step: number) {
+    return Math.round(Math.round(a / step) * step);
+}

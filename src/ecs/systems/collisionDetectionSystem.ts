@@ -1,9 +1,10 @@
-﻿import {ComponentClassMap, ComponentInstanceMap, query, System} from "@typeonce/ecs";
+﻿import {query, System} from "@typeonce/ecs";
 import {SystemTags} from "../systemTags.ts";
 import {GameEventMap} from "../gameEventMap.ts";
-import {SpriteWrapperComponent} from "../components/spriteWrapperComponent.ts";
 import {ColliderComponent} from "../components/colliderComponent.ts";
 import {groupBy} from "../../utils/groupBy.ts";
+import {QueryResponse} from "../../utils/queryResponse.ts";
+import {BoundsComponent} from "../components/boundsComponent.ts";
 
 export type CollisionLayer =
     | "Level"
@@ -14,21 +15,19 @@ const collisionMatrix = new Map<CollisionLayer, CollisionLayer[]>([
     ["Level", ["Level", "Player"]],
 ]);
 
-const colliderQueryMap: ComponentClassMap = {
-    spriteWrapper: SpriteWrapperComponent,
+const colliderQueryMap = {
+    bounds: BoundsComponent,
     collider: ColliderComponent
 };
+type CollidersQueryResponse = QueryResponse<typeof colliderQueryMap>;
 
 const colliders = query(colliderQueryMap);
-
-type CollidersQueryResponse = ComponentInstanceMap<typeof colliderQueryMap>;
-    
 
 const SystemFactory = System<SystemTags, GameEventMap>();
 
 function handle_collision(a: CollidersQueryResponse, b: CollidersQueryResponse): void {
-    const bounds1 = a.spriteWrapper.sprite.getBounds();
-    const bounds2 = b.spriteWrapper.sprite.getBounds();
+    const bounds1 = a.bounds.getBounds();
+    const bounds2 = b.bounds.getBounds();
 
     const isColliding = (
         bounds1.x < bounds2.x + bounds2.width
@@ -54,6 +53,11 @@ export class CollisionDetectionSystem extends SystemFactory<{}>
 ("CollisionDetectionSystem", {
     execute: ({world}) => {
         const colliderEntities = colliders(world);
+        
+        colliderEntities.forEach(obj => {
+           obj.collider.collidingEntities.clear();
+        });
+        
         const byLayer = groupBy(colliderEntities, e => e.collider.layer);
         
         byLayer.forEach((entitiesA, layerA) => {
